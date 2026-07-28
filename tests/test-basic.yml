@@ -1,0 +1,97 @@
+name: Test basic allure report generation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up allure-results with sample test data
+        run: |
+          mkdir -p allure-results
+          # Create a minimal allure result JSON
+          cat > allure-results/test-result.json << 'EOF'
+          {
+            "uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "historyId": "test-history-id",
+            "name": "Sample Test",
+            "status": "passed",
+            "stage": "finished",
+            "start": 1700000000000,
+            "stop": 1700000001000
+          }
+          EOF
+
+      - name: Set up empty gh-pages directory (no prior history)
+        run: |
+          mkdir -p gh-pages
+          # Create a minimal last-history dir so cp doesn't fail
+          mkdir -p gh-pages/last-history
+
+      - id: action
+        uses: .
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          gh_pages: gh-pages
+          allure_history: allure-history
+          keep_reports: '20'
+          github_run_num: '42'
+          github_run_id: '9999999'
+          github_repo: 'test-owner/test-repo'
+          github_repo_owner: 'test-owner'
+          github_tests_repo: 'test-owner/test-repo'
+          github_server_url: 'https://github.com'
+
+      - name: Assert allure-report was generated
+        run: |
+          echo "Checking allure-report directory..."
+          if [ ! -d "$GITHUB_WORKSPACE/allure-report" ]; then
+            echo "FAIL: allure-report directory not found"
+            exit 1
+          fi
+          echo "PASS: allure-report directory exists"
+
+      - name: Assert allure-report contains index.html
+        run: |
+          echo "Checking allure-report/index.html..."
+          if [ ! -f "$GITHUB_WORKSPACE/allure-report/index.html" ]; then
+            echo "FAIL: allure-report/index.html not found"
+            exit 1
+          fi
+          echo "PASS: allure-report/index.html exists"
+
+      - name: Assert allure-history was created with run number folder
+        run: |
+          echo "Checking allure-history/42 directory..."
+          if [ ! -d "$GITHUB_WORKSPACE/allure-history/42" ]; then
+            echo "FAIL: allure-history/42 directory not found"
+            exit 1
+          fi
+          echo "PASS: allure-history/42 directory exists"
+
+      - name: Assert allure-history contains last-history
+        run: |
+          echo "Checking allure-history/last-history directory..."
+          if [ ! -d "$GITHUB_WORKSPACE/allure-history/last-history" ]; then
+            echo "FAIL: allure-history/last-history directory not found"
+            exit 1
+          fi
+          echo "PASS: allure-history/last-history directory exists"
+
+      - name: Assert allure-history index.html redirect is correct
+        run: |
+          echo "Checking allure-history/index.html..."
+          if [ ! -f "$GITHUB_WORKSPACE/allure-history/index.html" ]; then
+            echo "FAIL: allure-history/index.html not found"
+            exit 1
+          fi
+          CONTENT=$(cat "$GITHUB_WORKSPACE/allure-history/index.html")
+          echo "Content: $CONTENT"
+          if echo "$CONTENT" | grep -q "42/index.html"; then
+            echo "PASS: index.html contains redirect to run 42"
+          else
+            echo "FAIL: index.html does not contain expected redirect to run 42"
+            exit 1
+          fi

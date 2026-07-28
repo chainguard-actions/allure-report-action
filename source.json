@@ -1,6 +1,11 @@
 {
   "owner": "simple-elf",
   "repo": "allure-report-action",
-  "version": "",
-  "url": "https://github.com/simple-elf/allure-report-action"
+  "version": "v1.15",
+  "commit_sha": "385367cde61ac68c2568a117f7579f7f148dc459",
+  "url": "https://github.com/simple-elf/allure-report-action",
+  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "2",
+  "harden_agent_version": "2"
 }
