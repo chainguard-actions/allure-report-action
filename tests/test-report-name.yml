@@ -1,4 +1,4 @@
-name: Test report_name input
+name: Test allure report with custom report name
 on:
   workflow_dispatch:
 jobs:
@@ -7,10 +7,23 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Set up allure results directory
+      - name: Prepare allure-results directory
         run: |
           mkdir -p allure-results
-          cp $GITHUB_WORKSPACE/actions/hardened/simple-elf--allure-report-action/v1.14/tests/fixtures/allure-results/* allure-results/
+          cat > allure-results/sample-result.json << 'EOF'
+          {
+            "uuid": "cccccccc-dddd-eeee-ffff-000000000000",
+            "historyId": "report-name-test-history-id",
+            "name": "Report Name Test",
+            "status": "passed",
+            "stage": "finished",
+            "start": 1700000000000,
+            "stop": 1700000001000
+          }
+          EOF
+
+      - name: Prepare empty gh-pages directory
+        run: |
           mkdir -p gh-pages
 
       - id: action
@@ -21,56 +34,54 @@ jobs:
           gh_pages: gh-pages
           allure_history: allure-history
           keep_reports: '20'
-          github_run_num: '42'
-          github_run_id: '99999'
-          github_repo: 'myorg/myrepo'
-          github_repo_owner: 'myorg'
-          github_tests_repo: 'myorg/myrepo'
+          github_run_num: '55'
+          github_run_id: '5555555555'
+          github_repo: 'test-owner/test-repo'
+          github_repo_owner: 'test-owner'
+          github_tests_repo: 'test-owner/test-repo'
           github_server_url: 'https://github.com'
           report_name: 'My Custom Allure Report'
 
-      - name: Assert executor.json contains custom report name
+      - name: Assert allure-report was generated
         run: |
-          echo "Checking allure-history/42 for executor.json or report content..."
-          # The executor.json is moved into allure-results before generation,
-          # so it ends up embedded in the generated report. Check the report dir.
+          echo "Checking allure-report directory..."
           if [ ! -d "allure-report" ]; then
             echo "FAIL: allure-report directory was not created"
             exit 1
           fi
           echo "PASS: allure-report directory exists"
 
-          # Check that the report was copied to allure-history/42
-          if [ ! -d "allure-history/42" ]; then
-            echo "FAIL: allure-history/42 directory was not created"
-            exit 1
-          fi
-          echo "PASS: allure-history/42 directory exists"
-
-          # Verify the report name appears in the generated report widgets
-          echo "Searching for custom report name in generated report..."
-          if grep -r "My Custom Allure Report" allure-report/ 2>/dev/null | grep -q "My Custom Allure Report"; then
-            echo "PASS: Custom report name found in allure-report"
-          else
-            echo "INFO: Custom report name not found in allure-report (may be embedded differently)"
-            echo "Checking allure-history/42..."
-            if grep -r "My Custom Allure Report" allure-history/42/ 2>/dev/null | grep -q "My Custom Allure Report"; then
-              echo "PASS: Custom report name found in allure-history/42"
-            else
-              echo "INFO: Custom report name verification skipped - report generated successfully"
-            fi
-          fi
-
-      - name: Assert index.html redirect points to run 42
+      - name: Assert allure-report contains index.html
         run: |
-          echo "Checking allure-history/index.html..."
-          if [ ! -f "allure-history/index.html" ]; then
-            echo "FAIL: allure-history/index.html was not created"
+          echo "Checking allure-report/index.html..."
+          if [ ! -f "allure-report/index.html" ]; then
+            echo "FAIL: allure-report/index.html was not created"
             exit 1
           fi
-          cat allure-history/index.html
-          if ! grep -q "/42/index.html" allure-history/index.html; then
-            echo "FAIL: index.html does not redirect to run 42"
+          echo "PASS: allure-report/index.html exists"
+
+      - name: Assert allure-history run number subdir exists
+        run: |
+          echo "Checking allure-history/55 directory..."
+          if [ ! -d "allure-history/55" ]; then
+            echo "FAIL: allure-history/55 directory was not created"
             exit 1
           fi
-          echo "PASS: index.html redirects to run 42"
+          echo "PASS: allure-history/55 directory exists"
+
+      - name: Assert report widgets contain custom report name
+        run: |
+          echo "Checking for custom report name in generated report..."
+          # The report name appears in the widgets/summary.json file
+          SUMMARY_FILE="allure-report/widgets/summary.json"
+          if [ ! -f "$SUMMARY_FILE" ]; then
+            echo "FAIL: $SUMMARY_FILE not found"
+            exit 1
+          fi
+          CONTENT=$(cat "$SUMMARY_FILE")
+          echo "Summary content: $CONTENT"
+          if ! echo "$CONTENT" | grep -q "My Custom Allure Report"; then
+            echo "FAIL: summary.json does not contain custom report name"
+            exit 1
+          fi
+          echo "PASS: summary.json contains custom report name"

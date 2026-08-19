@@ -1,0 +1,96 @@
+name: Test allure report with subfolder
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Prepare allure-results directory
+        run: |
+          mkdir -p allure-results
+          cat > allure-results/sample-result.json << 'EOF'
+          {
+            "uuid": "11111111-2222-3333-4444-555555555555",
+            "historyId": "subfolder-test-history-id",
+            "name": "Subfolder Test",
+            "status": "passed",
+            "stage": "finished",
+            "start": 1700000000000,
+            "stop": 1700000001000
+          }
+          EOF
+
+      - name: Prepare empty gh-pages directory
+        run: |
+          mkdir -p gh-pages
+
+      - id: action
+        uses: .
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          gh_pages: gh-pages
+          allure_history: allure-history
+          subfolder: 'my-project'
+          keep_reports: '20'
+          github_run_num: '100'
+          github_run_id: '8888888888'
+          github_repo: 'test-owner/test-repo'
+          github_repo_owner: 'test-owner'
+          github_tests_repo: 'test-owner/test-repo'
+          github_server_url: 'https://github.com'
+
+      - name: Assert allure-report was generated
+        run: |
+          echo "Checking allure-report directory..."
+          if [ ! -d "allure-report" ]; then
+            echo "FAIL: allure-report directory was not created"
+            exit 1
+          fi
+          echo "PASS: allure-report directory exists"
+
+      - name: Assert subfolder was created in allure-history
+        run: |
+          echo "Checking allure-history/my-project directory..."
+          if [ ! -d "allure-history/my-project" ]; then
+            echo "FAIL: allure-history/my-project subfolder was not created"
+            exit 1
+          fi
+          echo "PASS: allure-history/my-project subfolder exists"
+
+      - name: Assert run number subdir exists inside subfolder
+        run: |
+          echo "Checking allure-history/my-project/100 directory..."
+          if [ ! -d "allure-history/my-project/100" ]; then
+            echo "FAIL: allure-history/my-project/100 directory was not created"
+            exit 1
+          fi
+          echo "PASS: allure-history/my-project/100 directory exists"
+
+      - name: Assert subfolder index.html redirects to correct run
+        run: |
+          echo "Checking allure-history/my-project/index.html..."
+          if [ ! -f "allure-history/my-project/index.html" ]; then
+            echo "FAIL: allure-history/my-project/index.html was not created"
+            exit 1
+          fi
+          CONTENT=$(cat allure-history/my-project/index.html)
+          echo "Content: $CONTENT"
+          if ! echo "$CONTENT" | grep -q "100/index.html"; then
+            echo "FAIL: index.html does not redirect to run 100"
+            exit 1
+          fi
+          echo "PASS: allure-history/my-project/index.html redirects to run 100"
+
+      - name: Assert subfolder URL is included in index.html
+        run: |
+          echo "Checking that subfolder URL is in index.html..."
+          CONTENT=$(cat allure-history/my-project/index.html)
+          echo "Content: $CONTENT"
+          if ! echo "$CONTENT" | grep -q "my-project"; then
+            echo "FAIL: index.html does not contain subfolder path 'my-project'"
+            exit 1
+          fi
+          echo "PASS: index.html contains subfolder path"

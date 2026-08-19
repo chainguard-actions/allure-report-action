@@ -1,0 +1,23 @@
+name: allure-report-pr
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  allure-pr:
+    name: Check Allure Report Action on Pull Request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Allure Report action from repo
+        uses: ./
+        with:
+          allure_results: allure-results
+          allure_history: allure-history
+          keep_reports: 1
