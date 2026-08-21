@@ -1,0 +1,22 @@
+{
+  "name": "Sample Test",
+  "status": "passed",
+  "stage": "finished",
+  "description": "A sample test result for CI testing",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "start": 1596783485736,
+  "stop": 1596783487784,
+  "uuid": "aaaabbbb-cccc-dddd-eeee-ffffffffffff",
+  "historyId": "abc123def456",
+  "fullName": "io.example.SampleTest.shouldPass",
+  "labels": [
+    {"name": "suite", "value": "SampleTest"},
+    {"name": "testClass", "value": "io.example.SampleTest"},
+    {"name": "testMethod", "value": "shouldPass"},
+    {"name": "framework", "value": "junit-platform"},
+    {"name": "language", "value": "java"}
+  ],
+  "links": []
+}

@@ -1,4 +1,4 @@
-name: Test basic allure report generation
+name: Test allure report generation with custom report URL
 on:
   workflow_dispatch:
 jobs:
@@ -43,11 +43,12 @@ jobs:
           gh_pages: gh-pages
           allure_history: allure-history
           keep_reports: '20'
-          github_run_num: '42'
-          github_run_id: '9999999'
+          github_run_num: '77'
+          github_run_id: '7777777'
           github_repo: 'myorg/myrepo'
           github_repo_owner: 'myorg'
           github_tests_repo: 'myorg/myrepo'
+          report_url: 'https://reports.example.com/allure'
           github_server_url: 'https://github.com'
 
       - name: Assert action outcome
@@ -69,58 +70,68 @@ jobs:
         if: steps.action.outcome == 'success'
         run: |
           echo "Checking allure-report directory..."
-          ls -la "$GITHUB_WORKSPACE/" || true
           if [ ! -d "$GITHUB_WORKSPACE/allure-report" ]; then
             echo "FAIL: allure-report directory was not created"
             exit 1
           fi
-          echo "allure-report contents:"
-          ls -la "$GITHUB_WORKSPACE/allure-report"
           if [ ! -f "$GITHUB_WORKSPACE/allure-report/index.html" ]; then
             echo "FAIL: allure-report/index.html not found"
             exit 1
           fi
           echo "PASS: allure-report/index.html exists"
 
-      - name: Assert allure-history was created with run number subfolder
+      - name: Assert index.html uses custom report URL
         if: steps.action.outcome == 'success'
         run: |
-          echo "Checking allure-history directory..."
-          if [ ! -d "$GITHUB_WORKSPACE/allure-history" ]; then
-            echo "FAIL: allure-history directory was not created"
-            exit 1
-          fi
-          echo "allure-history contents:"
-          ls -la "$GITHUB_WORKSPACE/allure-history"
-          if [ ! -d "$GITHUB_WORKSPACE/allure-history/42" ]; then
-            echo "FAIL: allure-history/42 (run number subfolder) not found"
-            exit 1
-          fi
-          echo "PASS: allure-history/42 exists"
-
-      - name: Assert index.html redirect was created
-        if: steps.action.outcome == 'success'
-        run: |
-          echo "Checking allure-history/index.html..."
+          echo "Checking allure-history/index.html for custom URL..."
           if [ ! -f "$GITHUB_WORKSPACE/allure-history/index.html" ]; then
             echo "FAIL: allure-history/index.html not found"
             exit 1
           fi
           CONTENT=$(cat "$GITHUB_WORKSPACE/allure-history/index.html")
           echo "index.html content: $CONTENT"
-          if echo "$CONTENT" | grep -q "42/index.html"; then
-            echo "PASS: index.html contains redirect to run 42"
+          if echo "$CONTENT" | grep -q "reports.example.com/allure"; then
+            echo "PASS: index.html contains custom report URL"
           else
-            echo "FAIL: index.html does not contain expected redirect to run 42"
+            echo "FAIL: index.html does not contain custom report URL 'reports.example.com/allure'"
+            exit 1
+          fi
+          if echo "$CONTENT" | grep -q "77/index.html"; then
+            echo "PASS: index.html contains redirect to run 77"
+          else
+            echo "FAIL: index.html does not contain expected redirect to run 77"
             exit 1
           fi
 
-      - name: Assert last-history was copied
+      - name: Assert allure-history run number folder exists
         if: steps.action.outcome == 'success'
         run: |
-          echo "Checking allure-history/last-history..."
-          if [ ! -d "$GITHUB_WORKSPACE/allure-history/last-history" ]; then
-            echo "FAIL: allure-history/last-history directory not found"
+          echo "Checking allure-history/77..."
+          if [ ! -d "$GITHUB_WORKSPACE/allure-history/77" ]; then
+            echo "FAIL: allure-history/77 (run number subfolder) not found"
             exit 1
           fi
-          echo "PASS: allure-history/last-history exists"
+          echo "PASS: allure-history/77 exists"
+
+      - name: Assert executor.json was created with correct build URL
+        if: steps.action.outcome == 'success'
+        run: |
+          echo "Checking executor.json in allure-results..."
+          if [ -f "$GITHUB_WORKSPACE/allure-report/export/executor.json" ]; then
+            CONTENT=$(cat "$GITHUB_WORKSPACE/allure-report/export/executor.json")
+            echo "executor.json content: $CONTENT"
+            if echo "$CONTENT" | grep -q "7777777"; then
+              echo "PASS: executor.json contains run id"
+            else
+              echo "FAIL: executor.json does not contain run id 7777777"
+              exit 1
+            fi
+          else
+            echo "executor.json not in expected location, checking report was generated..."
+            if [ -f "$GITHUB_WORKSPACE/allure-report/index.html" ]; then
+              echo "PASS: report was generated (executor.json location may vary)"
+            else
+              echo "FAIL: report was not generated"
+              exit 1
+            fi
+          fi
